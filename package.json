@@ -1,0 +1,29 @@
+{
+	"name": "ecommerce-backend",
+	"version": "1.0.0",
+	"description": "This is an ecommerce backend server",
+	"license": "ISC",
+	"author": "Anunay Argha",
+	"type": "module",
+	"main": "./dist/app.js",
+	"scripts": {
+		"build": "tsc",
+		"start": "node ./dist/app.js",
+		"dev": "nodemon --exec ts-node --esm ./src/app.ts"
+	},
+	"dependencies": {
+		"bcrypt": "^6.0.0",
+		"dotenv": "^17.2.1",
+		"express": "^5.1.0",
+		"jsonwebtoken": "^9.0.2",
+		"mongoose": "^8.17.1"
+	},
+	"devDependencies": {
+		"@types/express": "^5.0.3",
+		"@types/mongoose": "^5.11.96",
+		"@types/node": "^24.2.1",
+		"nodemon": "^3.1.10",
+		"ts-node": "^10.9.2",
+		"typescript": "^5.9.2"
+	}
+}

@@ -1,0 +1,11 @@
+# ? Dependency folders
+node_modules/
+dist/
+
+# ? Environment variables
+.env
+
+# ? Logs and temp files
+npm-debug.log*
+.DS_Store
+*.lo
