@@ -1,4 +1,5 @@
-import { model, Schema, Document } from "mongoose";
+import { model, Schema, Document, Model } from "mongoose";
+import bcrypt from "bcrypt";
 
 export interface IAddress {
 	street: string;
@@ -14,19 +15,25 @@ export interface IUser extends Document {
 	photo: string;
 	role: "user" | "admin";
 	password: string;
-	passwordConfirm: string;
 	shippingAddress: IAddress;
 	billingAddress: IAddress;
-	passwordChangedAt?: Date;
-	passwordResetToken?: string;
-	passwordResetExpire?: Date;
-	refreshToken: string;
+	passwordChangedAt: Date;
+	passwordResetToken: string;
+	passwordResetExpire: Date;
+	refreshTokens: string[];
 	mfaEnabled: boolean;
 	mfaSecret: string;
 	emailVerified: boolean;
+	emailVerificationToken: string;
+	emailVerificationExpire: Date;
+	active: boolean;
 }
 
-const userSchema = new Schema<IUser>(
+interface IUserDocument extends IUser, Document {
+	matchPassword(enteredPassword: string): Promise<boolean>;
+}
+
+const userSchema = new Schema<IUserDocument>(
 	{
 		name: {
 			type: String,
@@ -57,16 +64,6 @@ const userSchema = new Schema<IUser>(
 			select: false,
 			minlength: 8,
 		},
-		passwordConfirm: {
-			type: String,
-			required: [true, "Please confirm your password"],
-			validate: {
-				validator: function (el: string) {
-					return el === this.password;
-				},
-				message: "Passwords are not the same!",
-			},
-		},
 		shippingAddress: {
 			street: { type: String },
 			city: { type: String },
@@ -84,14 +81,55 @@ const userSchema = new Schema<IUser>(
 		passwordChangedAt: Date,
 		passwordResetToken: String,
 		passwordResetExpire: Date,
-		refreshToken: { type: String, select: false },
+		refreshTokens: { type: [String], select: false },
 		mfaEnabled: { type: Boolean, default: false },
 		mfaSecret: { type: String, select: false },
 		emailVerified: { type: Boolean, default: false },
+		emailVerificationToken: String,
+		emailVerificationExpire: Date,	
+		active: {
+			type: Boolean,
+			default: true,
+			select: false, 
+		},
 	},
 	{ timestamps: true }
 );
 
-const User = model<IUser>("User", userSchema);
+// ? Schema Middleware
+userSchema.pre("save", async function (next) {
+	if (this.isModified("password")) {
+		const salt = bcrypt.genSaltSync(10);
+		this.password = await bcrypt.hash(this.password, salt);
+	}
+	next();
+});
+
+// ? Schema Methods
+userSchema.methods.matchPassword = async function (enteredPassword: string) {
+	return await bcrypt.compare(enteredPassword, this.password);
+};
+
+// ? Schema Virtuals
+userSchema
+	.virtual("passwordConfirm")
+	.get(function () {
+		return (this as any).passwordConfirm;
+	})
+	.set(function (value: string) {
+		(this as any).passwordConfirm = value;
+	});
+
+userSchema.pre("validate", function (next) {
+	if (
+		this.isModified("password") &&
+		(this as any).passwordConfirm !== this.password
+	) {
+		this.invalidate("password", "Passwords do not match");
+	}
+	next();
+});
+
+const User: Model<IUserDocument> = model<IUserDocument>("User", userSchema);
 
 export default User;
